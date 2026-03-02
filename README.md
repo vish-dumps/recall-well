@@ -36,6 +36,21 @@ npm i
 npm run dev
 ```
 
+## Run with MongoDB + API
+
+This project now includes a lightweight Express API that connects to MongoDB at `mongodb://127.0.0.1:27017/recall-well`.
+
+```sh
+# Start local MongoDB first (default port 27017), then:
+npm run dev:full
+```
+
+Useful scripts:
+
+- `npm run server` - starts API on `http://localhost:4000`
+- `npm run dev` - starts Vite UI on `http://localhost:8080`
+- `npm run dev:full` - starts API + UI together
+
 **Edit a file directly in GitHub**
 
 - Navigate to the desired file(s).

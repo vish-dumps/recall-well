@@ -1,10 +1,11 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Note } from '@/types/note';
+import { Note, getPrimarySolution } from '@/types/note';
 import { DifficultyBadge } from '@/components/DifficultyBadge';
 import { Button } from '@/components/ui/button';
 import { Brain, Eye, Code, ArrowRight, CheckCircle } from 'lucide-react';
 import Editor from '@monaco-editor/react';
+import { useTheme } from '@/hooks/useTheme';
 
 interface ReviewPageProps {
   dueNotes: Note[];
@@ -13,12 +14,11 @@ interface ReviewPageProps {
 
 export default function ReviewPage({ dueNotes, onReview }: ReviewPageProps) {
   const navigate = useNavigate();
+  const { theme } = useTheme();
   const [currentIndex, setCurrentIndex] = useState(0);
   const [showApproach, setShowApproach] = useState(false);
   const [showCode, setShowCode] = useState(false);
   const [rated, setRated] = useState(false);
-
-  const isDark = document.documentElement.classList.contains('dark');
 
   if (dueNotes.length === 0) {
     return (
@@ -43,6 +43,11 @@ export default function ReviewPage({ dueNotes, onReview }: ReviewPageProps) {
   }
 
   const note = dueNotes[currentIndex];
+  const primarySolution = getPrimarySolution(note);
+  const revealedApproach = primarySolution?.notes || note.approach;
+  const revealedCode = primarySolution?.code || note.code;
+  const revealedLanguage = primarySolution?.language || note.language || 'cpp';
+  const visibleProblem = note.problemStatement || note.notes || 'No problem statement.';
 
   const handleRate = (rating: 'easy' | 'okay' | 'hard') => {
     onReview(note.id, rating);
@@ -57,7 +62,7 @@ export default function ReviewPage({ dueNotes, onReview }: ReviewPageProps) {
   };
 
   return (
-    <div className="max-w-2xl mx-auto">
+    <div className="max-w-2xl mx-auto px-3 md:px-4">
       {/* Progress */}
       <div className="flex items-center justify-between mb-8 text-sm text-muted-foreground font-mono">
         <span>{currentIndex + 1} / {dueNotes.length}</span>
@@ -84,7 +89,7 @@ export default function ReviewPage({ dueNotes, onReview }: ReviewPageProps) {
         {/* Problem */}
         <section className="mb-6">
           <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">Problem Statement</h3>
-          <p className="text-foreground leading-relaxed whitespace-pre-wrap">{note.problemStatement || 'No problem statement.'}</p>
+          <p className="text-foreground leading-relaxed whitespace-pre-wrap">{visibleProblem}</p>
         </section>
 
         {/* Reveal buttons */}
@@ -99,22 +104,22 @@ export default function ReviewPage({ dueNotes, onReview }: ReviewPageProps) {
           </Button>
         )}
 
-        {showApproach && note.approach && (
+        {showApproach && revealedApproach && (
           <section className="mt-4 mb-6 animate-fade-in">
             <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">Approach</h3>
-            <p className="text-foreground leading-relaxed whitespace-pre-wrap">{note.approach}</p>
+            <p className="text-foreground leading-relaxed whitespace-pre-wrap">{revealedApproach}</p>
           </section>
         )}
 
-        {showCode && note.code && (
+        {showCode && revealedCode && (
           <section className="mt-4 mb-6 animate-fade-in">
             <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">Code</h3>
             <div className="border border-border rounded-lg overflow-hidden">
               <Editor
                 height="250px"
-                defaultLanguage="cpp"
-                value={note.code}
-                theme={isDark ? 'vs-dark' : 'light'}
+                language={revealedLanguage}
+                value={revealedCode}
+                theme={theme === 'dark' ? 'vs-dark' : 'vs'}
                 options={{ readOnly: true, minimap: { enabled: false }, fontSize: 14, fontFamily: 'IBM Plex Mono, monospace', scrollBeyondLastLine: false, padding: { top: 12 } }}
               />
             </div>

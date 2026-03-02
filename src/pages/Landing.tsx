@@ -13,12 +13,12 @@ export default function Landing() {
       <nav className="flex items-center justify-between px-6 lg:px-12 h-16 border-b border-border bg-card/50 backdrop-blur-sm">
         <div className="flex items-center gap-2">
           <Brain className="h-5 w-5 text-primary" />
-          <span className="font-semibold text-foreground tracking-tight">Recall</span>
+          <span className="font-display text-foreground tracking-tight text-lg">Recall</span>
         </div>
         <div className="flex items-center gap-3">
           <ThemeToggle theme={theme} onToggle={toggleTheme} />
           <Button asChild variant="outline" size="sm">
-            <Link to="/app">Open App</Link>
+            <Link to="/dashboard">Open App</Link>
           </Button>
         </div>
       </nav>
@@ -30,7 +30,7 @@ export default function Landing() {
           Solve once. Remember forever.
         </div>
 
-        <h1 className="text-4xl md:text-6xl lg:text-7xl font-bold text-foreground tracking-tight leading-[1.1] max-w-3xl">
+        <h1 className="font-display text-4xl md:text-6xl lg:text-7xl text-foreground tracking-tight leading-[1.1] max-w-3xl">
           Your coding
           <br />
           <span className="text-primary">revision</span> notebook.
@@ -42,7 +42,7 @@ export default function Landing() {
 
         <div className="mt-10 flex items-center gap-4">
           <Button asChild size="lg" className="gap-2">
-            <Link to="/app">
+            <Link to="/dashboard">
               Get Started
               <ArrowRight className="h-4 w-4" />
             </Link>
