@@ -1,10 +1,18 @@
 import express from 'express';
 import cors from 'cors';
 import mongoose from 'mongoose';
+import crypto from 'node:crypto';
 
 const PORT = Number(process.env.PORT || 4000);
 const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://127.0.0.1:27017/recall-well';
 const PROFILE_KEY = 'default';
+const ALLOWED_WEB_ORIGINS = new Set([
+  'http://localhost:8080',
+  'http://127.0.0.1:8080',
+  'http://localhost:5173',
+  'http://127.0.0.1:5173',
+]);
+const SUPPORTED_LANGUAGES = new Set(['cpp', 'java', 'python', 'javascript', 'typescript', 'csharp', 'go', 'rust']);
 
 const profileSchema = new mongoose.Schema(
   {
@@ -64,9 +72,25 @@ const noteSchema = new mongoose.Schema(
 const Note = mongoose.model('Note', noteSchema);
 
 const app = express();
+
+function isAllowedOrigin(origin) {
+  if (!origin) return true;
+  if (ALLOWED_WEB_ORIGINS.has(origin)) return true;
+  if (origin.startsWith('chrome-extension://')) return true;
+  if (origin.startsWith('moz-extension://')) return true;
+  return false;
+}
+
 app.use(
   cors({
-    origin: ['http://localhost:8080', 'http://127.0.0.1:8080', 'http://localhost:5173', 'http://127.0.0.1:5173'],
+    origin(origin, callback) {
+      if (isAllowedOrigin(origin)) {
+        callback(null, true);
+        return;
+      }
+
+      callback(new Error(`CORS blocked for origin: ${origin || 'unknown'}`));
+    },
   })
 );
 app.use(express.json({ limit: '6mb' }));
@@ -117,6 +141,172 @@ function sanitizeNotePayload(payload = {}) {
     });
   }
   return note;
+}
+
+function toText(value) {
+  return typeof value === 'string' ? value.trim() : '';
+}
+
+function createEntityId() {
+  if (typeof crypto.randomUUID === 'function') {
+    return crypto.randomUUID();
+  }
+
+  return `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+}
+
+function clamp(value, min, max) {
+  return Math.min(max, Math.max(min, value));
+}
+
+function normalizeStringList(value) {
+  const list = Array.isArray(value) ? value : typeof value === 'string' ? value.split(',') : [];
+  const seen = new Set();
+  const normalized = [];
+
+  list.forEach(item => {
+    const next = toText(item);
+    if (!next) return;
+    const key = next.toLowerCase();
+    if (seen.has(key)) return;
+    seen.add(key);
+    normalized.push(next);
+  });
+
+  return normalized;
+}
+
+function normalizeDifficulty(value) {
+  const raw = toText(value).toLowerCase();
+  if (!raw) return 'Medium';
+  if (raw.includes('easy')) return 'Easy';
+  if (raw.includes('medium')) return 'Medium';
+  if (raw.includes('hard')) return 'Hard';
+
+  const rating = Number(raw.replace(/[^\d]/g, ''));
+  if (Number.isFinite(rating) && rating > 0) {
+    if (rating <= 1200) return 'Easy';
+    if (rating <= 1800) return 'Medium';
+    return 'Hard';
+  }
+
+  return 'Medium';
+}
+
+function normalizeLanguage(value) {
+  const raw = toText(value).toLowerCase();
+  if (!raw) return 'cpp';
+
+  const aliases = {
+    'c++': 'cpp',
+    cpp: 'cpp',
+    c: 'cpp',
+    java: 'java',
+    py: 'python',
+    python: 'python',
+    js: 'javascript',
+    javascript: 'javascript',
+    ts: 'typescript',
+    typescript: 'typescript',
+    'c#': 'csharp',
+    csharp: 'csharp',
+    cs: 'csharp',
+    golang: 'go',
+    go: 'go',
+    rust: 'rust',
+  };
+
+  const normalized = aliases[raw] || raw;
+  return SUPPORTED_LANGUAGES.has(normalized) ? normalized : 'cpp';
+}
+
+function detectPlatformFromLink(link) {
+  const lower = toText(link).toLowerCase();
+  if (!lower) return 'Other';
+  if (lower.includes('leetcode.com')) return 'LeetCode';
+  if (lower.includes('codeforces.com')) return 'Codeforces';
+  if (lower.includes('geeksforgeeks.org')) return 'GFG';
+  if (lower.includes('codingninjas.com') || lower.includes('naukri.com')) return 'Code360';
+  if (lower.includes('hackerrank.com')) return 'HackerRank';
+  if (lower.includes('codechef.com')) return 'CodeChef';
+  if (lower.includes('atcoder.jp')) return 'AtCoder';
+  return 'Other';
+}
+
+function normalizePlatform(value, link) {
+  const input = toText(value);
+  if (!input) return detectPlatformFromLink(link);
+
+  const lowered = input.toLowerCase();
+  if (lowered === 'leetcode') return 'LeetCode';
+  if (lowered === 'codeforces') return 'Codeforces';
+  if (lowered === 'gfg' || lowered.includes('geeks')) return 'GFG';
+  if (lowered.includes('code360') || lowered.includes('codingninjas') || lowered.includes('naukri')) return 'Code360';
+  if (lowered.includes('hackerrank')) return 'HackerRank';
+  if (lowered.includes('codechef')) return 'CodeChef';
+  if (lowered.includes('atcoder')) return 'AtCoder';
+  if (lowered === 'other') return 'Other';
+  return input;
+}
+
+function computeRevisionInterval(confidence) {
+  if (confidence <= 2) return 1;
+  if (confidence === 3) return 3;
+  if (confidence === 4) return 7;
+  return 14;
+}
+
+function getNextRevisionDate(interval) {
+  const date = new Date();
+  date.setDate(date.getDate() + interval);
+  return date.toISOString();
+}
+
+function buildImportedNote(payload = {}) {
+  const now = new Date().toISOString();
+  const confidence = clamp(Math.round(asNumber(payload.confidence) ?? 3), 1, 5);
+  const revisionInterval = computeRevisionInterval(confidence);
+  const link = toText(payload.link);
+  const language = normalizeLanguage(payload.language);
+  const approachName = toText(payload.approachName) || 'Approach 1';
+  const approachNotes = toText(payload.approachNotes || payload.approach);
+  const code = typeof payload.code === 'string' ? payload.code : '';
+  const solutionId = createEntityId();
+
+  return sanitizeNotePayload({
+    id: toText(payload.id) || createEntityId(),
+    title: toText(payload.title) || 'Untitled Problem',
+    platform: normalizePlatform(payload.platform, link),
+    link,
+    difficulty: normalizeDifficulty(payload.difficulty),
+    tags: normalizeStringList(payload.tags),
+    groups: normalizeStringList(payload.groups),
+    problemStatement: typeof payload.problemStatement === 'string' ? payload.problemStatement : '',
+    notes: '',
+    approach: approachNotes,
+    mistakes: toText(payload.mistakes),
+    code,
+    language,
+    solutions: [
+      {
+        id: solutionId,
+        title: approachName,
+        notes: approachNotes,
+        code,
+        language,
+        isPinned: true,
+        createdAt: now,
+        updatedAt: now,
+      },
+    ],
+    isPinned: Boolean(payload.isPinned),
+    isFavorite: Boolean(payload.isFavorite),
+    confidence,
+    revisionInterval,
+    nextRevisionDate: getNextRevisionDate(revisionInterval),
+    createdAt: now,
+    updatedAt: now,
+  });
 }
 
 function toNoteResponse(note) {
@@ -438,6 +628,24 @@ app.post('/api/notes', async (req, res) => {
     res.status(201).json(toNoteResponse(saved));
   } catch (error) {
     res.status(500).json({ message: 'Failed to save note', details: error instanceof Error ? error.message : 'Unknown error' });
+  }
+});
+
+app.post('/api/notes/import', async (req, res) => {
+  try {
+    const payload = buildImportedNote(req.body);
+
+    const saved = await Note.findOneAndUpdate({ id: payload.id }, payload, {
+      upsert: true,
+      new: true,
+      setDefaultsOnInsert: true,
+      overwriteDiscriminatorKey: true,
+      lean: true,
+    });
+
+    res.status(201).json(toNoteResponse(saved));
+  } catch (error) {
+    res.status(500).json({ message: 'Failed to import note', details: error instanceof Error ? error.message : 'Unknown error' });
   }
 });
 

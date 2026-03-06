@@ -1,13 +1,13 @@
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Search, Plus, Calendar, Pin } from 'lucide-react';
+import { Search, Plus, Calendar, Pin, Heart } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { DifficultyBadge } from '@/components/DifficultyBadge';
 import { ConfidenceBar } from '@/components/ConfidenceBar';
 import { Difficulty, Note } from '@/types/note';
-import { sortNotesByPinned } from '@/lib/groups';
+import { sortNotesByFavorite } from '@/lib/groups';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 
@@ -23,7 +23,7 @@ export default function NotesPage({ notes, onUpdate }: NotesPageProps) {
   const [filterDifficulty, setFilterDifficulty] = useState<string>('all');
 
   const filtered = useMemo(() => {
-    return sortNotesByPinned(notes).filter(note => {
+    return sortNotesByFavorite(notes).filter(note => {
       const matchSearch =
         note.title.toLowerCase().includes(search.toLowerCase()) ||
         note.tags.some(tag => tag.toLowerCase().includes(search.toLowerCase()));
@@ -137,15 +137,15 @@ export default function NotesPage({ notes, onUpdate }: NotesPageProps) {
                   onClick={event => {
                     event.preventDefault();
                     event.stopPropagation();
-                    onUpdate(note.id, { isPinned: !note.isPinned });
+                    onUpdate(note.id, { isFavorite: !note.isFavorite });
                   }}
                   className="rounded-full p-1.5 transition-colors hover:bg-muted"
-                  title={note.isPinned ? 'Unpin question' : 'Pin question'}
+                  title={note.isFavorite ? 'Remove from favorites' : 'Add to favorites'}
                 >
-                  <Pin
+                  <Heart
                     className={cn(
                       'h-4 w-4 transition-colors',
-                      note.isPinned ? 'fill-primary text-primary' : 'text-muted-foreground'
+                      note.isFavorite ? 'fill-primary text-primary' : 'text-muted-foreground'
                     )}
                   />
                 </button>

@@ -13,6 +13,8 @@ import { toApiUrl } from '@/lib/api';
 
 const STORAGE_KEY = 'recall-notes';
 const GROUPS_STORAGE_KEY = 'recall-custom-groups';
+const PINNED_GROUPS_STORAGE_KEY = 'recall-pinned-groups';
+const REMOTE_SYNC_INTERVAL_MS = 15000;
 
 function loadNotes(): Note[] {
   try {
@@ -41,6 +43,19 @@ function saveCustomGroups(groups: string[]) {
   localStorage.setItem(GROUPS_STORAGE_KEY, JSON.stringify(groups));
 }
 
+function loadPinnedGroups(): string[] {
+  try {
+    const data = localStorage.getItem(PINNED_GROUPS_STORAGE_KEY);
+    return data ? (JSON.parse(data) as string[]) : [];
+  } catch {
+    return [];
+  }
+}
+
+function savePinnedGroups(groups: string[]) {
+  localStorage.setItem(PINNED_GROUPS_STORAGE_KEY, JSON.stringify(groups));
+}
+
 function mergeGroupLists(existing: string[], incoming: string[]): string[] {
   return normalizeGroupNames([...existing, ...incoming]);
 }
@@ -49,9 +64,17 @@ function isSameGroupList(left: string[], right: string[]): boolean {
   return left.length === right.length && left.every((group, index) => group === right[index]);
 }
 
+function buildNotesSignature(notes: Note[]): string {
+  return [...notes]
+    .map(note => `${note.id}:${note.updatedAt}`)
+    .sort()
+    .join('|');
+}
+
 export function useNotes() {
   const [notes, setNotes] = useState<Note[]>(loadNotes);
   const [customGroups, setCustomGroups] = useState<string[]>(loadCustomGroups);
+  const [pinnedGroups, setPinnedGroups] = useState<string[]>(loadPinnedGroups);
   const notesRef = useRef<Note[]>(notes);
   const customGroupsRef = useRef<string[]>(customGroups);
 
@@ -64,6 +87,10 @@ export function useNotes() {
     saveCustomGroups(customGroups);
     customGroupsRef.current = customGroups;
   }, [customGroups]);
+
+  useEffect(() => {
+    savePinnedGroups(pinnedGroups);
+  }, [pinnedGroups]);
 
   useEffect(() => {
     const groupsFromNotes = normalizeGroupNames(notes.flatMap(note => note.groups || []));
@@ -121,7 +148,11 @@ export function useNotes() {
         if (cancelled) return;
 
         if (remoteNotes.length > 0) {
-          setNotes(remoteNotes);
+          const remoteSignature = buildNotesSignature(remoteNotes);
+          const localSignature = buildNotesSignature(notesRef.current);
+          if (remoteSignature !== localSignature) {
+            setNotes(remoteNotes);
+          }
           return;
         }
 
@@ -141,6 +172,30 @@ export function useNotes() {
       cancelled = true;
     };
   }, [upsertNoteToApi]);
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      void (async () => {
+        try {
+          const response = await fetch(toApiUrl('/notes'));
+          if (!response.ok) return;
+
+          const remoteNotes = ((await response.json()) as Note[]).map(normalizeNote);
+          if (remoteNotes.length === 0) return;
+
+          const remoteSignature = buildNotesSignature(remoteNotes);
+          const localSignature = buildNotesSignature(notesRef.current);
+          if (remoteSignature !== localSignature) {
+            setNotes(remoteNotes);
+          }
+        } catch {
+          // Silent polling failure; local notes stay visible.
+        }
+      })();
+    }, REMOTE_SYNC_INTERVAL_MS);
+
+    return () => clearInterval(timer);
+  }, []);
 
   const addNote = useCallback((note: Omit<Note, 'id' | 'revisionInterval' | 'nextRevisionDate' | 'createdAt' | 'updatedAt'>) => {
     const interval = calculateNextRevision(note.confidence);
@@ -226,5 +281,14 @@ export function useNotes() {
     });
   }, [updateNoteInApi]);
 
-  return { notes, customGroups, createCustomGroup, addNote, updateNote, deleteNote, getDueNotes, reviewNote };
+  const togglePinGroup = useCallback((groupId: string) => {
+    setPinnedGroups(prev => {
+      if (prev.includes(groupId)) {
+        return prev.filter(id => id !== groupId);
+      }
+      return [...prev, groupId];
+    });
+  }, []);
+
+  return { notes, customGroups, pinnedGroups, createCustomGroup, togglePinGroup, addNote, updateNote, deleteNote, getDueNotes, reviewNote };
 }

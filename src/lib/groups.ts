@@ -1,6 +1,6 @@
 import { Difficulty, Note, normalizeGroupName, toGroupKey } from '@/types/note';
 
-export type GroupKind = 'pinned' | 'difficulty' | 'tag' | 'custom';
+export type GroupKind = 'favorite' | 'difficulty' | 'tag' | 'custom';
 
 export interface GroupCard {
   id: string;
@@ -25,8 +25,17 @@ export function sortNotesByPinned(notes: Note[]): Note[] {
   });
 }
 
+export function sortNotesByFavorite(notes: Note[]): Note[] {
+  return [...notes].sort((left, right) => {
+    const favDelta = Number(Boolean(right.isFavorite)) - Number(Boolean(left.isFavorite));
+    if (favDelta !== 0) return favDelta;
+
+    return new Date(right.updatedAt).getTime() - new Date(left.updatedAt).getTime();
+  });
+}
+
 export function buildSmartGroups(notes: Note[]): GroupCard[] {
-  const pinnedCount = notes.filter(note => Boolean(note.isPinned)).length;
+  const favoriteCount = notes.filter(note => Boolean(note.isFavorite)).length;
   const difficultyCounts = difficultyOrder.reduce<Record<Difficulty, number>>(
     (acc, level) => ({ ...acc, [level]: notes.filter(note => note.difficulty === level).length }),
     { Easy: 0, Medium: 0, Hard: 0 }
@@ -59,7 +68,7 @@ export function buildSmartGroups(notes: Note[]): GroupCard[] {
     }));
 
   return [
-    { id: 'pinned', label: 'Pinned', description: 'Pinned questions', count: pinnedCount, kind: 'pinned' },
+    { id: 'favorite', label: 'Favourite', description: 'Favourite questions', count: favoriteCount, kind: 'favorite' },
     ...difficultyOrder.map(level => ({
       id: `difficulty:${level.toLowerCase()}`,
       label: level,
@@ -87,14 +96,15 @@ export function buildCustomGroupCards(customGroups: string[], notes: Note[]): Gr
 }
 
 export function normalizeGroupId(groupId: string): string {
-  return groupId === 'favorite' ? 'pinned' : groupId;
+  if (groupId === 'pinned') return 'favorite';
+  return groupId;
 }
 
 export function getNotesForGroup(notes: Note[], groupId: string): Note[] {
   const normalizedGroupId = normalizeGroupId(groupId);
 
-  if (normalizedGroupId === 'pinned') {
-    return sortNotesByPinned(notes.filter(note => Boolean(note.isPinned)));
+  if (normalizedGroupId === 'favorite') {
+    return sortNotesByFavorite(notes.filter(note => Boolean(note.isFavorite)));
   }
 
   if (normalizedGroupId.startsWith('difficulty:')) {

@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Plus, Sparkles, FolderPlus, Pin, Hash, Layers } from 'lucide-react';
+import { Plus, Sparkles, FolderPlus, Pin, Hash, Layers, Heart } from 'lucide-react';
 import { Note, normalizeGroupName, toGroupKey } from '@/types/note';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -19,11 +19,13 @@ import { toast } from 'sonner';
 interface GroupsPageProps {
   notes: Note[];
   customGroups: string[];
+  pinnedGroups: string[];
   onCreateGroup: (groupName: string) => string | null;
+  onTogglePinGroup: (groupId: string) => void;
 }
 
 function getGroupGradient(group: GroupCard) {
-  if (group.id === 'pinned') {
+  if (group.id === 'favorite') {
     return 'from-sky-500/20 via-transparent to-transparent';
   }
 
@@ -47,19 +49,35 @@ function getGroupGradient(group: GroupCard) {
 }
 
 function getGroupIcon(group: GroupCard) {
-  if (group.id === 'pinned') return Pin;
+  if (group.id === 'favorite') return Heart;
   if (group.kind === 'tag') return Hash;
   if (group.kind === 'custom') return FolderPlus;
   return Layers;
 }
 
-export default function GroupsPage({ notes, customGroups, onCreateGroup }: GroupsPageProps) {
+export default function GroupsPage({ notes, customGroups, pinnedGroups, onCreateGroup, onTogglePinGroup }: GroupsPageProps) {
   const navigate = useNavigate();
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [newGroupName, setNewGroupName] = useState('');
 
   const smartGroups = useMemo(() => buildSmartGroups(notes), [notes]);
   const customGroupCards = useMemo(() => buildCustomGroupCards(customGroups, notes), [customGroups, notes]);
+
+  const allGroups = useMemo(() => {
+    const favoriteGroup = smartGroups.find(g => g.id === 'favorite');
+    const otherSmartGroups = smartGroups.filter(g => g.id !== 'favorite');
+
+    const pinned = [...otherSmartGroups, ...customGroupCards].filter(g => pinnedGroups.includes(g.id));
+    const unpinnedAuto = otherSmartGroups.filter(g => !pinnedGroups.includes(g.id));
+    const unpinnedCustom = customGroupCards.filter(g => !pinnedGroups.includes(g.id));
+
+    const result = [];
+    if (favoriteGroup) result.push(favoriteGroup);
+    result.push(...pinned);
+    result.push(...unpinnedAuto);
+    result.push(...unpinnedCustom);
+    return result;
+  }, [smartGroups, customGroupCards, pinnedGroups]);
 
   const handleCreateGroup = () => {
     const normalized = normalizeGroupName(newGroupName);
@@ -89,41 +107,11 @@ export default function GroupsPage({ notes, customGroups, onCreateGroup }: Group
       </div>
 
       <section className="rounded-2xl border border-border bg-card/40 p-4 md:p-5">
-        <p className="mb-3 flex items-center gap-2 text-xs uppercase tracking-wider text-muted-foreground">
-          <Sparkles className="h-3.5 w-3.5" />
-          Auto Groups
-        </p>
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
-          {smartGroups.map(group => {
-            const Icon = getGroupIcon(group);
-            return (
-              <Link
-                key={group.id}
-                to={`/groups/${encodeURIComponent(group.id)}`}
-                className="group relative min-h-[148px] overflow-hidden rounded-2xl border border-border bg-card/70 p-5 text-left transition-colors hover:border-primary/40"
-              >
-                <div className={cn('pointer-events-none absolute inset-0 bg-gradient-to-br', getGroupGradient(group))} />
-                <div className="relative flex h-full flex-col">
-                  <div className="flex items-start justify-between">
-                    <Icon className="h-5 w-5 text-muted-foreground" />
-                    <span className="flex h-10 w-10 items-center justify-center rounded-full border border-border bg-background/85 text-sm font-mono text-foreground">
-                      {group.count}
-                    </span>
-                  </div>
-                  <div className="mt-auto">
-                    <p className="font-display text-xl uppercase tracking-wide text-foreground">{group.label}</p>
-                    <p className="text-xs text-muted-foreground">{group.description}</p>
-                  </div>
-                </div>
-              </Link>
-            );
-          })}
-        </div>
-      </section>
-
-      <section className="rounded-2xl border border-border bg-card/40 p-4 md:p-5">
         <div className="mb-3 flex items-center justify-between gap-3">
-          <p className="text-base font-semibold text-foreground">Your Groups</p>
+          <p className="flex items-center gap-2 text-xs uppercase tracking-wider text-muted-foreground">
+            <Layers className="h-3.5 w-3.5" />
+            All Groups
+          </p>
           <Button size="sm" variant="outline" onClick={() => setCreateDialogOpen(true)} className="h-8 gap-1.5">
             <Plus className="h-3.5 w-3.5" />
             New Group
@@ -131,28 +119,52 @@ export default function GroupsPage({ notes, customGroups, onCreateGroup }: Group
         </div>
 
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
-          {customGroupCards.map(group => {
+          {allGroups.map(group => {
             const Icon = getGroupIcon(group);
+            const isPinned = pinnedGroups.includes(group.id);
+            const isFavoriteCard = group.id === 'favorite';
             return (
-              <Link
-                key={group.id}
-                to={`/groups/${encodeURIComponent(group.id)}`}
-                className="group relative min-h-[148px] overflow-hidden rounded-2xl border border-border bg-card/70 p-5 text-left transition-colors hover:border-primary/40"
-              >
-                <div className={cn('pointer-events-none absolute inset-0 bg-gradient-to-br', getGroupGradient(group))} />
-                <div className="relative flex h-full flex-col">
-                  <div className="flex items-start justify-between">
-                    <Icon className="h-5 w-5 text-muted-foreground" />
-                    <span className="flex h-10 w-10 items-center justify-center rounded-full border border-border bg-background/85 text-sm font-mono text-foreground">
-                      {group.count}
-                    </span>
+              <div key={group.id} className="relative group/card h-full">
+                <Link
+                  to={`/groups/${encodeURIComponent(group.id)}`}
+                  className={cn(
+                    "group relative block min-h-[148px] overflow-hidden rounded-2xl border bg-card/70 p-5 text-left transition-colors hover:border-primary/40 h-full",
+                    isFavoriteCard ? "border-sky-500/30" : (isPinned ? "border-primary/30" : "border-border")
+                  )}
+                >
+                  <div className={cn('pointer-events-none absolute inset-0 bg-gradient-to-br', getGroupGradient(group))} />
+                  <div className="relative flex h-full flex-col">
+                    <div className="flex items-start justify-between">
+                      <Icon className={cn("h-5 w-5", isFavoriteCard ? "text-sky-500" : "text-muted-foreground")} />
+                      <span className="flex h-10 w-10 items-center justify-center rounded-full border border-border bg-background/85 text-sm font-mono text-foreground">
+                        {group.count}
+                      </span>
+                    </div>
+                    <div className="mt-auto">
+                      <p className={cn("font-display text-xl uppercase tracking-wide", isFavoriteCard ? "text-sky-500" : "text-foreground")}>{group.label}</p>
+                      <p className="text-xs text-muted-foreground">{group.description}</p>
+                    </div>
                   </div>
-                  <div className="mt-auto">
-                    <p className="font-display text-xl uppercase tracking-wide text-foreground">{group.label}</p>
-                    <p className="text-xs text-muted-foreground">{group.description}</p>
-                  </div>
-                </div>
-              </Link>
+                </Link>
+                {!isFavoriteCard && (
+                  <button
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      onTogglePinGroup(group.id);
+                    }}
+                    className={cn(
+                      "absolute top-4 right-16 p-2 rounded-full transition-all duration-200 z-10",
+                      isPinned
+                        ? "opacity-100 bg-primary/10 text-primary hover:bg-primary/20"
+                        : "opacity-0 group-hover/card:opacity-100 bg-background/80 text-muted-foreground hover:bg-muted"
+                    )}
+                    title={isPinned ? "Unpin group" : "Pin group to top"}
+                  >
+                    <Pin className={cn("h-4 w-4", isPinned && "fill-primary")} />
+                  </button>
+                )}
+              </div>
             );
           })}
 

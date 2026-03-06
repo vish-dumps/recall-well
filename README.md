@@ -51,6 +51,31 @@ Useful scripts:
 - `npm run dev` - starts Vite UI on `http://localhost:8080`
 - `npm run dev:full` - starts API + UI together
 
+## Browser extension: Recall Capture
+
+A Chrome-compatible extension is included at:
+
+- `browser-extension/recall-capture`
+
+It captures problem details from CP pages (LeetCode, Codeforces, Code360/Coding Ninjas/Naukri, GFG), lets you edit fields, and creates a note directly in this app.
+
+### Load the extension
+
+1. Open Chrome and go to `chrome://extensions`.
+2. Enable **Developer mode**.
+3. Click **Load unpacked**.
+4. Select `browser-extension/recall-capture`.
+
+### Use it
+
+1. Start backend + app: `npm run dev:full`.
+2. Open a supported problem page.
+3. Click the extension icon and wait for auto-analysis.
+4. Fill `Approach Name` and `Approach Notes`.
+5. Click **Create Note**.
+
+The extension posts to `POST /api/notes/import` (default API base: `http://localhost:4000/api`).
+
 **Edit a file directly in GitHub**
 
 - Navigate to the desired file(s).

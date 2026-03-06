@@ -18,7 +18,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { ArrowLeft, ExternalLink, Pencil, Trash2, Calendar, Pin, Plus } from 'lucide-react';
+import { ArrowLeft, ExternalLink, Pencil, Trash2, Calendar, Pin, Plus, Heart } from 'lucide-react';
 import Editor from '@monaco-editor/react';
 import { format } from 'date-fns';
 import { toast } from 'sonner';
@@ -124,9 +124,9 @@ export default function NoteViewPage({ notes, customGroups, onCreateGroup, onDel
     navigate('/app');
   };
 
-  const handleTogglePinnedQuestion = () => {
-    onUpdate(note.id, { isPinned: !note.isPinned });
-    toast.success(note.isPinned ? 'Question unpinned' : 'Question pinned');
+  const handleToggleFavoriteQuestion = () => {
+    onUpdate(note.id, { isFavorite: !note.isFavorite });
+    toast.success(note.isFavorite ? 'Removed from favorites' : 'Added to favorites');
   };
 
   const handleRevisionLanguageChange = (nextLanguage: string) => {
@@ -294,14 +294,14 @@ export default function NoteViewPage({ notes, customGroups, onCreateGroup, onDel
                 <h1 className="text-4xl font-display text-foreground">{note.title}</h1>
                 <DifficultyBadge difficulty={note.difficulty} />
                 <button
-                  onClick={handleTogglePinnedQuestion}
+                  onClick={handleToggleFavoriteQuestion}
                   className="p-1.5 rounded-full hover:bg-muted transition-colors"
-                  title={note.isPinned ? 'Unpin question' : 'Pin question'}
+                  title={note.isFavorite ? 'Remove from favorites' : 'Add to favorites'}
                 >
-                  <Pin
+                  <Heart
                     className={cn(
                       'h-6 w-6 transition-colors',
-                      note.isPinned ? 'fill-primary text-primary' : 'text-muted-foreground'
+                      note.isFavorite ? 'fill-primary text-primary' : 'text-muted-foreground'
                     )}
                   />
                 </button>

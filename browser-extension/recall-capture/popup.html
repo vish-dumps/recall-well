@@ -1,0 +1,148 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Recall Capture</title>
+    <link rel="stylesheet" href="popup.css" />
+  </head>
+  <body>
+    <main class="popup">
+      <header class="hero">
+        <div class="brand">
+          <div class="brand-mark">{ }</div>
+          <div>
+            <h1>Recall Capture</h1>
+            <p>Capture CP problems straight into your notes.</p>
+          </div>
+        </div>
+        <span id="siteChip" class="chip">Waiting for analysis...</span>
+      </header>
+
+      <section class="card">
+        <h2 class="section-title">Connection</h2>
+        <div class="grid two-cols">
+          <label class="field">
+            API Base URL
+            <input id="apiBaseUrl" type="text" placeholder="http://localhost:4000/api" />
+          </label>
+          <label class="field">
+            App Base URL
+            <input id="appBaseUrl" type="text" placeholder="http://localhost:8080" />
+          </label>
+        </div>
+        <button id="analyzeBtn" type="button" class="button secondary">
+          <span class="btn-text">Analyze Current Page</span>
+        </button>
+      </section>
+
+      <form id="captureForm" class="card">
+        <h2 class="section-title">Problem Data</h2>
+        <div class="grid two-cols">
+          <label class="field">
+            Platform
+            <select id="platform">
+              <option>LeetCode</option>
+              <option>Codeforces</option>
+              <option>Code360</option>
+              <option>GFG</option>
+              <option>HackerRank</option>
+              <option>CodeChef</option>
+              <option>AtCoder</option>
+              <option>Other</option>
+            </select>
+          </label>
+          <label class="field">
+            Difficulty
+            <select id="difficulty">
+              <option>Easy</option>
+              <option selected>Medium</option>
+              <option>Hard</option>
+            </select>
+          </label>
+        </div>
+
+        <label class="field">
+          Title
+          <input id="title" type="text" placeholder="e.g. Two Sum" required />
+        </label>
+
+        <label class="field">
+          Problem Link
+          <input id="link" type="url" placeholder="https://..." />
+        </label>
+
+        <label class="field">
+          Tags (comma separated)
+          <textarea id="tags" rows="2" placeholder="arrays, hashing, two-pointers"></textarea>
+        </label>
+
+        <label class="field">
+          Problem Statement
+          <textarea id="problemStatement" rows="6" placeholder="Auto captured problem statement..."></textarea>
+        </label>
+
+        <div class="grid two-cols">
+          <label class="field">
+            Code Language
+            <select id="language">
+              <option value="cpp">C++</option>
+              <option value="java">Java</option>
+              <option value="python">Python</option>
+              <option value="javascript">JavaScript</option>
+              <option value="typescript">TypeScript</option>
+              <option value="csharp">C#</option>
+              <option value="go">Go</option>
+              <option value="rust">Rust</option>
+            </select>
+          </label>
+          <label class="field">
+            Confidence (1-5)
+            <input id="confidence" type="number" min="1" max="5" value="3" />
+          </label>
+        </div>
+
+        <label class="field">
+          Code Snippet
+          <textarea id="code" rows="6" placeholder="Auto captured code from editor if available..."></textarea>
+        </label>
+
+        <h2 class="section-title section-gap">Your Approach</h2>
+        <label class="field">
+          Approach Name
+          <input id="approachName" type="text" placeholder="e.g. Prefix sum + hashmap" required />
+        </label>
+
+        <label class="field">
+          Approach Notes
+          <textarea id="approachNotes" rows="5" placeholder="Write your notes for this approach..."></textarea>
+        </label>
+
+        <button id="submitBtn" type="submit" class="button primary">
+          <span class="btn-text">Create Note</span>
+          <span class="btn-loader" aria-hidden="true"></span>
+        </button>
+      </form>
+
+      <div class="status-row">
+        <p id="status" class="status"></p>
+        <a id="openNoteLink" class="open-link" href="#" target="_blank" rel="noopener noreferrer" hidden>Open created note</a>
+      </div>
+    </main>
+
+    <div id="successOverlay" class="success-overlay" hidden>
+      <div class="success-card">
+        <div class="success-ring">
+          <svg viewBox="0 0 52 52" class="checkmark" aria-hidden="true">
+            <circle class="checkmark-circle" cx="26" cy="26" r="24"></circle>
+            <path class="checkmark-check" fill="none" d="M14 27l8 8 16-16"></path>
+          </svg>
+        </div>
+        <p class="success-title">Note Created</p>
+        <p class="success-subtitle">Saved to Recall Well</p>
+      </div>
+    </div>
+
+    <script src="popup.js"></script>
+  </body>
+</html>

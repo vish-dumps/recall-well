@@ -21,7 +21,7 @@ import { RatingsProvider } from "@/hooks/useRatings";
 const queryClient = new QueryClient();
 
 function AppRoutes() {
-  const { notes, customGroups, createCustomGroup, addNote, updateNote, deleteNote, getDueNotes, reviewNote } = useNotes();
+  const { notes, customGroups, pinnedGroups, createCustomGroup, togglePinGroup, addNote, updateNote, deleteNote, getDueNotes, reviewNote } = useNotes();
   useTheme(); // ensure theme class is applied
   const dueNotes = getDueNotes();
 
@@ -40,7 +40,7 @@ function AppRoutes() {
       } />
       <Route path="/groups" element={
         <AppLayout dueCount={dueNotes.length}>
-          <GroupsPage notes={notes} customGroups={customGroups} onCreateGroup={createCustomGroup} />
+          <GroupsPage notes={notes} customGroups={customGroups} pinnedGroups={pinnedGroups} onCreateGroup={createCustomGroup} onTogglePinGroup={togglePinGroup} />
         </AppLayout>
       } />
       <Route path="/groups/:groupId" element={

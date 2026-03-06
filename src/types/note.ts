@@ -159,8 +159,8 @@ export function normalizeNote(note: Note): Note {
     approach: primary?.notes || note.approach || note.notes || '',
     mistakes: note.mistakes || '',
     solutions,
-    isPinned: normalizedPinned,
-    isFavorite: normalizedPinned,
+    isPinned: Boolean(note.isPinned),
+    isFavorite: Boolean(note.isFavorite),
   };
 }
 
