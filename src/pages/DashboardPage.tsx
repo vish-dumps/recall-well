@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import { format, parseISO, startOfDay, subDays } from 'date-fns';
 import {
   ResponsiveContainer,
@@ -13,10 +13,9 @@ import {
   YAxis,
 } from 'recharts';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
 import { Note } from '@/types/note';
-import { PlatformRatings } from '@/types/profile';
-import { toApiUrl } from '@/lib/api';
-import { Code2, Loader2, Trophy } from 'lucide-react';
+import { Code2, Loader2, RefreshCw, Trophy } from 'lucide-react';
 import { useRatings } from '@/hooks/useRatings';
 import { useProfile } from '@/hooks/useProfile';
 
@@ -97,7 +96,7 @@ function formatDifficultyCount(value: number | null) {
 
 export default function DashboardPage({ notes }: DashboardPageProps) {
   const { profile } = useProfile();
-  const { ratings, loading: ratingsLoading, error: ratingsError } = useRatings();
+  const { ratings, loading: ratingsLoading, error: ratingsError, refreshRatings } = useRatings();
 
   const typeDistribution = useMemo(() => buildTypeDistribution(notes), [notes]);
   const difficultyDistribution = useMemo(() => buildDifficultyDistribution(notes), [notes]);
@@ -110,6 +109,8 @@ export default function DashboardPage({ notes }: DashboardPageProps) {
     hard: null,
   };
   const hasQuestionData = notes.length > 0;
+  const hasHandles = Boolean(profile.leetcodeId || profile.codeforcesId);
+  const showManualReloadHint = hasHandles && !ratings && !ratingsLoading && !ratingsError;
   const displayName = profile.name?.trim() || 'Coder';
 
   return (
@@ -254,26 +255,52 @@ export default function DashboardPage({ notes }: DashboardPageProps) {
         {/* Stats Card */}
         <Card className="rounded-3xl flex flex-col">
           <CardHeader className="pb-2">
-            <CardTitle className="text-lg">Stats Card</CardTitle>
-            <CardDescription>
-              LeetCode + Codeforces live ratings
-            </CardDescription>
+            <div className="flex items-start justify-between gap-3">
+              <div className="space-y-1">
+                <CardTitle className="text-lg">Stats Card</CardTitle>
+                <CardDescription>
+                  LeetCode + Codeforces live ratings
+                </CardDescription>
+              </div>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                className="h-7 w-7 shrink-0 rounded-full"
+                title="Reload ratings"
+                onClick={() => void refreshRatings()}
+                disabled={!hasHandles || ratingsLoading}
+              >
+                {ratingsLoading ? (
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                ) : (
+                  <RefreshCw className="h-3.5 w-3.5" />
+                )}
+              </Button>
+            </div>
           </CardHeader>
 
           <CardContent className="pt-0 flex-1">
-            {!profile.leetcodeId && !profile.codeforcesId ? (
+            {!hasHandles ? (
               <p className="text-sm text-muted-foreground h-full flex items-center justify-center text-center px-2">
                 Add your handles on Profile page to load ratings.
               </p>
-            ) : ratingsLoading ? (
+            ) : ratingsLoading && !ratings ? (
               <div className="h-full flex items-center justify-center gap-2 text-sm text-muted-foreground">
                 <Loader2 className="h-4 w-4 animate-spin" />
                 Fetching latest ratings...
               </div>
-            ) : ratingsError ? (
-              <p className="text-sm text-destructive">{ratingsError}</p>
+            ) : showManualReloadHint ? (
+              <p className="text-sm text-muted-foreground h-full flex items-center justify-center text-center px-2">
+                Ratings are loaded on demand. Click reload in the top-right.
+              </p>
+            ) : ratingsError && !ratings ? (
+              <p className="text-sm text-destructive h-full flex items-center justify-center text-center px-2">{ratingsError}</p>
             ) : (
               <div className="h-full flex flex-col gap-3">
+                {ratingsError && (
+                  <p className="text-xs text-destructive">{ratingsError}</p>
+                )}
                 <div className="rounded-2xl border border-cyan-700/40 bg-cyan-950/40 p-4">
                   <div className="flex items-center justify-between mb-1">
                     <p className="text-cyan-100 text-base font-semibold">

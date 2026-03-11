@@ -4,7 +4,6 @@ import { useProfile } from './useProfile';
 import { toApiUrl } from '@/lib/api';
 
 const RATINGS_CACHE_KEY = 'recall-ratings-cache';
-const RATINGS_CACHE_TIME = 1000 * 60 * 60; // 1 hour
 
 function readLocalRatings(): PlatformRatings | null {
     try {
@@ -24,6 +23,7 @@ interface RatingsContextType {
     ratings: PlatformRatings | null;
     loading: boolean;
     error: string;
+    refreshRatings: () => Promise<void>;
 }
 
 const RatingsContext = createContext<RatingsContextType | undefined>(undefined);
@@ -34,7 +34,7 @@ export function RatingsProvider({ children }: { children: ReactNode }) {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
 
-    const fetchRatings = useCallback(async (background = false) => {
+    const refreshRatings = useCallback(async () => {
         const hasAnyHandle = profile.leetcodeId || profile.codeforcesId;
         if (!hasAnyHandle) {
             setRatings(null);
@@ -42,7 +42,7 @@ export function RatingsProvider({ children }: { children: ReactNode }) {
             return;
         }
 
-        if (!background) setLoading(true);
+        setLoading(true);
         setError('');
 
         try {
@@ -57,34 +57,26 @@ export function RatingsProvider({ children }: { children: ReactNode }) {
             data.fetchedAt = new Date().toISOString();
             setRatings(data);
             writeLocalRatings(data);
-        } catch (err) {
-            if (!background) {
-                setError('Unable to load latest ratings right now.');
-            }
+        } catch {
+            setError('Unable to load latest ratings right now.');
         } finally {
-            if (!background) setLoading(false);
+            setLoading(false);
         }
     }, [profile.codeforcesId, profile.leetcodeId]);
 
     useEffect(() => {
-        const cached = readLocalRatings();
-        const isOld = !cached?.fetchedAt || (Date.now() - new Date(cached.fetchedAt).getTime() > RATINGS_CACHE_TIME);
-
-        if (!cached || isOld) {
-            fetchRatings(!!cached); // true means silent background fetch if cache already existed but was just old
+        const hasAnyHandle = profile.leetcodeId || profile.codeforcesId;
+        if (!hasAnyHandle) {
+            setRatings(null);
+            setError('');
+            return;
         }
 
-        // Background sync every 5 minutes while the app is open
-        const intervalId = setInterval(() => {
-            fetchRatings(true);
-        }, 1000 * 60 * 5);
+        setRatings(readLocalRatings());
+    }, [profile.codeforcesId, profile.leetcodeId]);
 
-        return () => clearInterval(intervalId);
-    }, [fetchRatings]);
-
-    // If there's no cache yet and we're loading, reflect that.
     return (
-        <RatingsContext.Provider value={{ ratings, loading: (!ratings && loading), error }}>
+        <RatingsContext.Provider value={{ ratings, loading, error, refreshRatings }}>
             {children}
         </RatingsContext.Provider>
     );

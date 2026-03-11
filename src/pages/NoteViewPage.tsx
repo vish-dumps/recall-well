@@ -18,7 +18,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { ArrowLeft, ExternalLink, Pencil, Trash2, Calendar, Pin, Plus, Heart } from 'lucide-react';
+import { ArrowLeft, Calendar, ChevronDown, ExternalLink, Heart, Pencil, Pin, Plus, Trash2 } from 'lucide-react';
 import Editor from '@monaco-editor/react';
 import { format } from 'date-fns';
 import { toast } from 'sonner';
@@ -57,6 +57,7 @@ export default function NoteViewPage({ notes, customGroups, onCreateGroup, onDel
   const [showAddApproachForm, setShowAddApproachForm] = useState(false);
   const [approachTitle, setApproachTitle] = useState('');
   const [approachNotes, setApproachNotes] = useState('');
+  const [isProblemStatementOpen, setIsProblemStatementOpen] = useState(false);
   const [isGroupDialogOpen, setGroupDialogOpen] = useState(false);
   const [selectedGroups, setSelectedGroups] = useState<string[]>([]);
   const [newGroupName, setNewGroupName] = useState('');
@@ -80,6 +81,7 @@ export default function NoteViewPage({ notes, customGroups, onCreateGroup, onDel
     setShowAddApproachForm(false);
     setApproachTitle('');
     setApproachNotes('');
+    setIsProblemStatementOpen(false);
     setGroupDialogOpen(false);
     setSelectedGroups(note.groups || []);
     setNewGroupName('');
@@ -348,9 +350,27 @@ export default function NoteViewPage({ notes, customGroups, onCreateGroup, onDel
           </div>
 
           {hasProblemStatement && (
-            <section className="space-y-3">
-              <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">Problem Statement</h2>
-              <p className="text-foreground leading-relaxed whitespace-pre-wrap">{note.problemStatement}</p>
+            <section className="space-y-2">
+              <button
+                type="button"
+                onClick={() => setIsProblemStatementOpen(prev => !prev)}
+                aria-expanded={isProblemStatementOpen}
+                aria-controls="problem-statement-content"
+                className="w-full rounded-xl border border-border bg-card/50 px-3 py-2 flex items-center justify-between gap-3 hover:bg-muted/40 transition-colors"
+              >
+                <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">Problem Statement</h2>
+                <ChevronDown
+                  className={cn(
+                    'h-4 w-4 text-muted-foreground transition-transform',
+                    isProblemStatementOpen && 'rotate-180'
+                  )}
+                />
+              </button>
+              {isProblemStatementOpen && (
+                <p id="problem-statement-content" className="text-foreground leading-relaxed whitespace-pre-wrap px-1">
+                  {note.problemStatement}
+                </p>
+              )}
             </section>
           )}
 
