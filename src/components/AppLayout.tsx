@@ -4,6 +4,7 @@ import {
   BarChart3,
   FileText,
   FolderTree,
+  NotebookPen,
   RotateCcw,
   Plus,
   UserCircle2,
@@ -22,6 +23,7 @@ import { useIsMobile } from '@/hooks/use-mobile';
 const navItems = [
   { label: 'Dashboard', path: '/dashboard', icon: BarChart3 },
   { label: 'Notes', path: '/app', icon: FileText },
+  { label: 'General Notes', path: '/general-notes', icon: NotebookPen },
   { label: 'Groups', path: '/groups', icon: FolderTree },
   { label: 'Review', path: '/review', icon: RotateCcw },
   { label: 'New', path: '/new', icon: Plus },

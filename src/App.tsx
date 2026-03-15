@@ -14,6 +14,7 @@ import NoteViewPage from "@/pages/NoteViewPage";
 import ReviewPage from "@/pages/ReviewPage";
 import DashboardPage from "@/pages/DashboardPage";
 import ProfilePage from "@/pages/ProfilePage";
+import GeneralNotesPage from "@/pages/GeneralNotesPage";
 import NotFound from "./pages/NotFound";
 import { Note } from "./types/note";
 import { RatingsProvider } from "@/hooks/useRatings";
@@ -36,6 +37,11 @@ function AppRoutes() {
       <Route path="/app" element={
         <AppLayout dueCount={dueNotes.length}>
           <NotesPage notes={notes} onUpdate={updateNote} />
+        </AppLayout>
+      } />
+      <Route path="/general-notes" element={
+        <AppLayout dueCount={dueNotes.length}>
+          <GeneralNotesPage />
         </AppLayout>
       } />
       <Route path="/groups" element={
